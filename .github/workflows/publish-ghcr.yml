@@ -1,0 +1,43 @@
+name: Publish to GHCR
+
+# Déclenchement 100% manuel — aucune synchronisation automatique avec upstream.
+# À lancer depuis l'onglet "Actions" du repo, quand tu décides de publier une version.
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag de l'image (ex: 3.8.50). 'latest' est toujours poussé en plus."
+        required: true
+        default: "latest"
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push (runner-base target)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: runner-base
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/ai-hub-routing:${{ github.event.inputs.tag }}
+            ghcr.io/${{ github.repository_owner }}/ai-hub-routing:latest
